@@ -2,17 +2,19 @@
 #include <sqlite3.h>
 #include <cstdio> 
 #include <vector>
+#include <curl/curl.h>
+//#include <nlohmann/json.hpp>
+#include <string>
 using namespace std;
 
 class SQLmanager 
 {
-public:
 struct stock
 {
 string symbol;
 double price;
 };
-
+public:
 stock s;
 void Insert_to_table(stock row,sqlite3 *db,char *errMsg)
 {
@@ -34,7 +36,7 @@ if (result == 0) {
 }
 }
 };
- class SQL_list_of_stocks :SQLmanager
+ class SQL_list_of_stocks : SQLmanager
 {
 public:
     vector<tuple<string, int>> StockList = {
