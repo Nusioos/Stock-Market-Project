@@ -37,9 +37,9 @@ void Get_values()
                     btc_price = j["bitcoin"]["usd"];
                     if(btc_price_dequeue.size()>60)
                     {
-                         btc_price_dequeue.pop_back();
+                         btc_price_dequeue.pop_front();
                     }
-                    btc_price_dequeue.push_front((size_t)btc_price);
+                    btc_price_dequeue.push_back((size_t)btc_price);
                    
           }
           catch(exception& e)
@@ -85,6 +85,7 @@ void Generate_graph(size_t Bitcoin_prize, deque<size_t> Stocks, size_t maksprice
     size_t minPrice = Stocks[0];
     size_t maxPrice = Stocks[0];
     const int HEIGHT=20;
+  
     for (auto p : Stocks) {
         if (p < minPrice) minPrice = p;
         if (p > maxPrice) maxPrice = p;
@@ -101,14 +102,27 @@ void Generate_graph(size_t Bitcoin_prize, deque<size_t> Stocks, size_t maksprice
                 sum = HEIGHT;
 
             if (sum == y)
-                cout << "x";
+            {
+                if (x == 0)
+                     cout << "x";
+                else if (x > 0 && Stocks[x] > Stocks[x - 1])
+                    cout << "\033[1;32mx\033[0m";  
+                else if (x >= 0 && Stocks[x] < Stocks[x - 1])
+                    cout << "\033[1;31mx\033[0m";  
+                
+  
+            }
+                
             else
-                cout << " ";
+               {
+                 cout << " ";
+               }
+               
         }
+        
         cout << endl;
     }
 
-    // Oś X
     cout << "+";
     for (size_t i = 0; i < Stocks.size(); i++)
         cout << "-";
