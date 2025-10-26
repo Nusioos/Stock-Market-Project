@@ -35,7 +35,7 @@ void Get_values()
                     json j = json::parse(readBuffer);
                      lock_guard<mutex> lock(mtx);
                     btc_price = j["bitcoin"]["usd"];
-                    if(btc_price_dequeue.size()>60)
+                    if(btc_price_dequeue.size()>200)
                     {
                          btc_price_dequeue.pop_front();
                     }
@@ -105,7 +105,7 @@ void Generate_graph(size_t Bitcoin_prize, deque<size_t> Stocks, size_t maksprice
             {
                 if (x == 0)
                      cout << "x";
-                else if (x > 0 && Stocks[x] > Stocks[x - 1])
+                else if (x >= 0 && Stocks[x] > Stocks[x - 1])
                     cout << "\033[1;32mx\033[0m";  
                 else if (x >= 0 && Stocks[x] < Stocks[x - 1])
                     cout << "\033[1;31mx\033[0m";  
