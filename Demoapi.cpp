@@ -7,6 +7,7 @@
 #include<mutex>
 #include <deque>
 using namespace std;
+
 using json = nlohmann::json;
 mutex mtx;  
 double btc_price = 0.0;

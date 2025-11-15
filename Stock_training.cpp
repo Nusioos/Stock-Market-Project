@@ -1,130 +1,186 @@
 #include <iostream>
 #include <sqlite3.h>
-#include <cstdio> 
+#include <cstdio>
 #include <vector>
 #include <curl/curl.h>
-//#include <nlohmann/json.hpp>
 #include <string>
+#include "Api_connetion.hpp"
 using namespace std;
 
-class SQLmanager 
+class SQLmanager
 {
-struct stock
-{
-string symbol;
-double price;
-};
-public:
-stock s;
-void Insert_to_table(stock row,sqlite3 *db,char *errMsg)
-{
-   string query="INSERT INTO stocks (symbol, price) VALUES ('" + row.symbol + "', " + std::to_string(row.price) + ");";
 
-    if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-       cout << "Blad INSERT: " << errMsg << endl;
-        sqlite3_free(errMsg);
-    } 
-}
-
-void Delete_database()
-{
-int result = remove("test.db");
-if (result == 0) {
-    cout << "Baza usunieta " <<endl;
-} else {
-    cout << "Error nie da sie usunac bazy" << endl;
-}
-}
-};
- class SQL_list_of_stocks : SQLmanager
-{
-public:
-    vector<tuple<string, int>> StockList = {
-        {"Bitcoin", 30000},
-        {"Ethereum", 2000},
-        {"Cardano", 1},
-        {"Solana", 35},
-        {"Polkadot", 20},
-        {"Dogecoin", 0},
-        {"Litecoin", 150},
-        {"Avalanche", 25},
-        {"Chainlink", 15},
-        {"Shiba", 0}
-    };
-};
-
-
-int main() {
-    sqlite3 *db;
-    char *errMsg =nullptr;
-    if(sqlite3_open("test.db",&db))
+    struct stock
     {
-        cerr << "fail" << sqlite3_errmsg(db) << endl;
-        return 1;
-    }
-    cout << "Success" << endl;
-  
-      const char *createTableSQL =
-        "CREATE TABLE IF NOT EXISTS stocks ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "symbol TEXT NOT NULL, "
-        "price REAL);";
+        string symbol;
+        double price;
+        string API_URL;
+    };
 
-    if (sqlite3_exec(db, createTableSQL, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        std::cerr << "Błąd tworzenia tabeli: " << errMsg << std::endl;
-        sqlite3_free(errMsg);
-    } else {
-        std::cout << "Tabela gotowa!" << std::endl;
+public:
+    sqlite3 *db;
+    char *errMsg = nullptr;
+    stock stock_object;
+    bool Initialize_database()
+    {
+        if (sqlite3_open("test.db", &db))
+        {
+            cerr << "fail" << sqlite3_errmsg(db) << endl;
+            return 1;
+        }
+        cout << "Success" << endl;
+
+        const char *createTableSQL =
+            "CREATE TABLE IF NOT EXISTS stocks ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "symbol TEXT NOT NULL, "
+            "price REAL,"
+            "API_URL TEXT NOT NULL);";
+
+        if (sqlite3_exec(db, createTableSQL, nullptr, nullptr, &errMsg) != SQLITE_OK)
+        {
+            std::cerr << "Błąd tworzenia tabeli: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+        }
+        else
+        {
+            std::cout << "Tabela gotowa!" << std::endl;
+        }
+        return true;
+    }
+    void Insert_to_table(stock row, sqlite3 *db, char *errMsg)
+    {
+        const char *sql = "INSERT INTO stocks (symbol, price, API_URL) VALUES (?, ?, ?)";
+        sqlite3_stmt *stmt;
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+        if (rc != SQLITE_OK)
+        {
+            cout << "error Insert";
+            return;
+        }
+        sqlite3_bind_text(stmt, 1, row.symbol.c_str(), -1, SQLITE_STATIC); // binding the variables
+        sqlite3_bind_double(stmt, 2, row.price);
+        sqlite3_bind_text(stmt, 3, row.API_URL.c_str(), -1, SQLITE_STATIC);
+
+        rc = sqlite3_step(stmt); // do query
+        if (rc != SQLITE_DONE)
+        {
+            cout << "query error: " << sqlite3_errmsg(db) << endl;
+        }
+        sqlite3_finalize(stmt);
+    }
+    void Delete_database()
+    {
+        int result = remove("test.db");
+        if (result == 0)
+        {
+            cout << "Baza usunieta " << endl;
+        }
+        else
+        {
+            cout << "Error nie da sie usunac bazy" << endl;
+        }
     }
 
-    SQLmanager* manager=new SQLmanager();
+    bool IS_database_empty(sqlite3 *db, int list_size, int &amount_of_elements_added)
+    {
+        sqlite3_stmt *stmt;
+
+        if (sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM stocks;", -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            return false;
+        }
+        int row_count = 0;
+        if (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            row_count = sqlite3_column_int(stmt, 0);
+        }
+        sqlite3_finalize(stmt);
+        amount_of_elements_added = list_size - row_count;
+        if (row_count == 0)
+            return true;
+        if (row_count < list_size)
+            return true;
+
+        return false;
+    }
+};
+class SQL_list_of_stocks : SQLmanager
+{
+private:
+    vector<tuple<string, double, string>> StockList = {
+        {"Bitcoin", 0, "tomojeapi"}}; // add from left side to not crash the adding algorithm  for exemple: {new_element},{old_element}  not : {old_element},{new_element}
+
+public:
+    int Stock_elements_size = StockList.size();
+    void Insert_basic_stocks(SQLmanager *manager, sqlite3 *db, char *errMsg, int &amount_of_elements_added)
+    {
+        for (int i = amount_of_elements_added - 1; i >= 0; i--)
+        {
+            manager->stock_object.symbol = get<0>(StockList[i]);
+            manager->stock_object.price = get<1>(StockList[i]);
+            manager->stock_object.API_URL = get<2>(StockList[i]);
+            manager->Insert_to_table(manager->stock_object, db, errMsg);
+        }
+    }
+};
+bool Do_ywt_cleardatabase(bool &Is_clearing_database)
+{
+    cout << "do tyou want to clear database 0-NO 1-YES :" << endl;
+    cin >> Is_clearing_database;
+    cout << "\033[2J\033[1;1H"; // clearing console
+    return Is_clearing_database;
+}
+int main()
+{
+    SQLmanager *manager = new SQLmanager();
     SQL_list_of_stocks Lista;
+    manager->Initialize_database();
+    int amount_of_elements_added = 0;
+    bool Is_table_empty = manager->IS_database_empty(manager->db, Lista.Stock_elements_size, amount_of_elements_added);
+    bool Is_clearing_database = Do_ywt_cleardatabase(Is_clearing_database);
+    if (Is_clearing_database)
+    {
+        manager->Delete_database();
+        exit(0);
+    }
+    if (Is_table_empty)
+    {
+        cout << "Adding elements to database: " << endl;
+        Lista.Insert_basic_stocks(manager, manager->db, manager->errMsg, amount_of_elements_added);
+    }
 
- for(int i=0;i<Lista.StockList.size();i++)
-  {
-    manager->s.symbol = get<0>(Lista.StockList[i]); //get for the tupples 
-    manager->s.price  = get<1>(Lista.StockList[i]); 
-    manager->Insert_to_table(manager->s,db,errMsg);
-  }
-
- //  manager->Delete_database(); //DELETES WHOLE DATABASE
-
-  /*const char *insertSQL = "INSERT INTO stocks (symbol, price) VALUES ('BTC', 65000.0);";
-    if (sqlite3_exec(db, insertSQL, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        std::cerr << "Błąd INSERT: " << errMsg << std::endl;
-        sqlite3_free(errMsg);
-    } else {
-        std::cout << "Dodano dane!" << std::endl;
-    }*/
-       auto callback = [](void*, int argc, char **argv, char **colNames) -> int {
+    auto callback = [](void *, int argc, char **argv, char **colNames) -> int
+    {
         std::cout << "Wynik:" << std::endl;
-        for (int i = 0; i < argc; i++) {
+        for (int i = 0; i < argc; i++)
+        {
             std::cout << colNames[i] << " = " << (argv[i] ? argv[i] : "NULL") << std::endl;
         }
         std::cout << "-------------------" << std::endl;
         return 0;
     };
 
-
-
-     auto find =[](void*,int argc,char **argv,char **colNames)->int
-     {
-cout << "Funkcja find" << endl;
-for(int i=0;i<argc ;i++)
-{
-     if (argv[i] && string(argv[i]) == "BTC") {
-            cout << "Znaleziono Bitcoin!" << endl;
+    /*auto find = [](void *, int argc, char **argv, char **colNames) -> int
+    {
+        cout << "Funkcja find" << endl;
+        for (int i = 0; i < argc; i++)
+        {
+            if (argv[i] && string(argv[i]) == "BTC")
+            {
+                cout << "Znaleziono Bitcoin!" << endl;
+            }
         }
-}
-return 0;
-     };
+        return 0;
+    };*/
 
-
-        const char *selectSQL = "SELECT * FROM stocks;";
-    if (sqlite3_exec(db, selectSQL, callback, nullptr, &errMsg) != SQLITE_OK) {
-        std::cerr << "Blad SELECT: " << errMsg << std::endl;
-        sqlite3_free(errMsg);
+    const char *selectSQL = "SELECT * FROM stocks;";
+    if (sqlite3_exec(manager->db, selectSQL, callback, nullptr, &manager->errMsg) != SQLITE_OK)
+    {
+        std::cerr << "Blad SELECT: " << manager->errMsg << std::endl;
+        sqlite3_free(manager->errMsg);
     }
-     sqlite3_close(db);
-     delete manager;
+
+    sqlite3_close(manager->db);
+    delete manager;
 }

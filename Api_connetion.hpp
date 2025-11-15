@@ -1,3 +1,4 @@
+
 #ifndef Api_connection_HPP
 #define Api_connection_HPP
 
@@ -79,31 +80,30 @@ private:
     deque<size_t> btc_price_dequeue;
 
 public:
-    Api_connection(string URL_of_API,string currname , string currency)
+    Api_connection(string URL_of_API, string currname, string currency) // add the URL to the API you need after that name that your currency has and currency i only use US dollars so it's for future development
     {
         curl_global_init(CURL_GLOBAL_DEFAULT);
         thread background(&Api_connection::Get_values, this, URL_of_API, currname, currency);
         background.detach();
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        this_thread::sleep_for(chrono::seconds(10));
         while (true)
         {
             {
                 lock_guard<mutex> lock(mtx);
-                std::cout << "Aktualna cena BTC: " << btc_price << " USD" << std::endl;
+                cout << "Aktualna cena BTC: " << btc_price << " USD" << std::endl;
                 size_t maks_price = max(curr, btc_price);
                 Graph_maker(btc_price, btc_price_dequeue, maks_price);
             }
-            std::this_thread::sleep_for(std::chrono::seconds(20));
-            std::cout << "sperma" << std::endl;
+            this_thread::sleep_for(chrono::seconds(20));
         }
     }
 
-    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) //Used in Get_values
     {
         ((std::string *)userp)->append((char *)contents, size * nmemb);
         return size * nmemb;
     }
-    void Get_values(string URL_, string name_of_curr, string currency)
+    void Get_values(string URL_, string name_of_curr, string currency) // Used in Api connection
     {
 
         while (true)
