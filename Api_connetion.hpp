@@ -10,6 +10,9 @@
 #include <thread>
 #include <mutex>
 #include <deque>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
 using namespace std;
 using json = nlohmann::json;
 class Api_connection_base
@@ -77,28 +80,95 @@ private:
     double curr = 0;
     mutex mtx;
     double btc_price = 0.0;
+    double prev_btc_price = 0.0;
     deque<size_t> btc_price_dequeue;
 
 public:
-    Api_connection(string URL_of_API, string currname, string currency) // add the URL to the API you need after that name that your currency has and currency i only use US dollars so it's for future development
+    string URL_of_API;
+    string currname;
+    string currency;
+    Api_connection(string URL_of_API, string currname, string currency) : URL_of_API(URL_of_API), currname(currname), currency(currency) {} // add the URL to the API you need after that name that your currency has and currency i only use US dollars so it's for future development
+
+    // Delete copy constructor
+    Api_connection(const Api_connection &) = delete;
+    Api_connection &operator=(const Api_connection &) = delete;
+
+    // Allow moving
+    Api_connection(Api_connection &&) = default;
+    Api_connection &operator=(Api_connection &&) = default;
+
+    void Initialize(string &URL_of_API, string &currname, string &currency, double &temp_price_to_retrive)
     {
         curl_global_init(CURL_GLOBAL_DEFAULT);
-        thread background(&Api_connection::Get_values, this, URL_of_API, currname, currency);
-        background.detach();
+        static bool threadStarted = false;
+        if (!threadStarted)
+        {
+            thread background(&Api_connection::Get_values, this, URL_of_API, currname, currency);
+            background.detach();
+            threadStarted = true;
+        }
         this_thread::sleep_for(chrono::seconds(10));
         while (true)
         {
+
             {
+                if (kbhit())
+                {
+                    char ch = getch();
+                    if (ch == 'Q' || ch == 'q')
+                    {
+                        cout << "Closing section..." << endl;
+                        break;
+                    }
+                }
+                // Get_values(URL_of_API, currname, currency);
                 lock_guard<mutex> lock(mtx);
-                cout << "Aktualna cena BTC: " << btc_price << " USD" << std::endl;
-                size_t maks_price = max(curr, btc_price);
-                Graph_maker(btc_price, btc_price_dequeue, maks_price);
+                if (btc_price != prev_btc_price)
+                {
+
+                    cout << "\033[2J\033[1;1H";
+                    cout << "price of BTC: " << btc_price << " USD" << endl;
+                    size_t maks_price = max(curr, btc_price);
+                    Graph_maker(btc_price, btc_price_dequeue, maks_price);
+                    prev_btc_price = btc_price;
+                    temp_price_to_retrive = prev_btc_price;
+                    cout << "To stop the program press Q" << endl;
+                }
             }
-            this_thread::sleep_for(chrono::seconds(20));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 
-    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) //Used in Get_values
+    bool kbhit()
+    {
+        struct termios oldt, newt;
+        int ch;
+        tcgetattr(STDIN_FILENO, &oldt); // terminal state
+        newt = oldt;
+        newt.c_lflag &= ~(ICANON | ECHO); //  non blocking type
+        newt.c_cc[VMIN] = 1;              // min len to read
+        newt.c_cc[VTIME] = 0;             // waiting for data
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+        // set file to not blockign type
+        fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+
+        ch = getchar();
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // go back to old terminal state
+        fcntl(STDIN_FILENO, F_SETFL, 0);         // chaning the type back again
+
+        if (ch != EOF)
+        {
+            ungetc(ch, stdin); // going back to sttarter buffer
+            return true;
+        }
+        return false;
+    }
+    char getch()
+    {
+        return getchar();
+    }
+    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) // Used in Get_values
     {
         ((std::string *)userp)->append((char *)contents, size * nmemb);
         return size * nmemb;
@@ -112,8 +182,10 @@ public:
             CURL *curl = curl_easy_init();
             if (curl)
             {
-                std::string readBuffer;
-                curl_easy_setopt(curl, CURLOPT_URL, URL_);
+                // cout << "Fetching from URL: " << URL_ << endl;
+
+                string readBuffer;
+                curl_easy_setopt(curl, CURLOPT_URL, URL_.c_str());
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
@@ -124,22 +196,45 @@ public:
                     try
                     {
                         json j = json::parse(readBuffer);
-                        lock_guard<mutex> lock(mtx);
-                        btc_price = j[name_of_curr][currency];
-                        if (btc_price_dequeue.size() > 200)
+                       // cout << "API Response: " << j.dump(2) << endl;
+
+                        if (j.contains(name_of_curr) && j[name_of_curr].contains(currency))
                         {
-                            btc_price_dequeue.pop_front();
+                            auto price = j[name_of_curr][currency];
+
+                            if (price.is_number())
+                            {
+                                lock_guard<mutex> lock(mtx);
+                                btc_price = price.get<double>();
+
+                                if (btc_price_dequeue.size() > 30)
+                                {
+                                    btc_price_dequeue.pop_front();
+                                }
+                                btc_price_dequeue.push_back((size_t)btc_price);
+                            }
+                            else
+                            {
+                                cerr << "Invalid data received for " << name_of_curr << " in currency " << currency << endl;
+                            }
                         }
-                        btc_price_dequeue.push_back((size_t)btc_price);
+                        else
+                        {
+                            cerr << "The expected data for " << name_of_curr << " in currency " << currency << " was not found." << endl;
+                        }
                     }
-                    catch (exception &e)
+                    catch (std::exception &e)
                     {
-                        cout << "blad" << endl;
+                        cerr << "Standard exception: " << e.what() << endl;
+                    }
+                    catch (...)
+                    {
+                        cerr << "other error uknown" << endl;
                     }
                 }
                 else
                 {
-                    cerr << "Błąd CURL: " << curl_easy_strerror(res) << endl;
+                    cerr << "error CURL: " << curl_easy_strerror(res) << endl;
                 }
 
                 curl_easy_cleanup(curl);
