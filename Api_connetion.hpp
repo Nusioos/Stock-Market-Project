@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
+#include <atomic>
 using namespace std;
 using json = nlohmann::json;
 class Api_connection_base
@@ -82,6 +83,8 @@ private:
     double btc_price = 0.0;
     double prev_btc_price = 0.0;
     deque<size_t> btc_price_dequeue;
+    atomic<bool> stop_thread{false};
+    thread background_thread;
 
 public:
     string URL_of_API;
@@ -89,6 +92,14 @@ public:
     string currency;
     Api_connection(string URL_of_API, string currname, string currency) : URL_of_API(URL_of_API), currname(currname), currency(currency) {} // add the URL to the API you need after that name that your currency has and currency i only use US dollars so it's for future development
 
+    ~Api_connection()
+    {
+        stop_thread = true;
+        if (background_thread.joinable())
+        {
+            background_thread.join();
+        }
+    }
     // Delete copy constructor
     Api_connection(const Api_connection &) = delete;
     Api_connection &operator=(const Api_connection &) = delete;
@@ -100,13 +111,9 @@ public:
     void Initialize(string &URL_of_API, string &currname, string &currency, double &temp_price_to_retrive)
     {
         curl_global_init(CURL_GLOBAL_DEFAULT);
-        static bool threadStarted = false;
-        if (!threadStarted)
-        {
-            thread background(&Api_connection::Get_values, this, URL_of_API, currname, currency);
-            background.detach();
-            threadStarted = true;
-        }
+        background_thread = thread(&Api_connection::Get_values, this, URL_of_API, currname, currency);
+        background_thread.detach();
+
         this_thread::sleep_for(chrono::seconds(10));
         while (true)
         {
@@ -127,7 +134,7 @@ public:
                 {
 
                     cout << "\033[2J\033[1;1H";
-                    cout << "price of BTC: " << btc_price << " USD" << endl;
+                    cout << "price of " << currname << ": " << btc_price << " USD" << endl;
                     size_t maks_price = max(curr, btc_price);
                     Graph_maker(btc_price, btc_price_dequeue, maks_price);
                     prev_btc_price = btc_price;
@@ -176,7 +183,7 @@ public:
     void Get_values(string URL_, string name_of_curr, string currency) // Used in Api connection
     {
 
-        while (true)
+        while (!stop_thread)
         {
 
             CURL *curl = curl_easy_init();
@@ -196,7 +203,7 @@ public:
                     try
                     {
                         json j = json::parse(readBuffer);
-                       // cout << "API Response: " << j.dump(2) << endl;
+                        // cout << "API Response: " << j.dump(2) << endl;
 
                         if (j.contains(name_of_curr) && j[name_of_curr].contains(currency))
                         {

@@ -109,7 +109,8 @@ class SQL_list_of_stocks : public SQLmanager
 {
 private:
     vector<tuple<string, double, string>> StockList = {
-        {"bitcoin", 0, "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"}}; // add from left side to not crash the adding algorithm  for exemple: {new_element},{old_element}  not : {old_element},{new_element}
+        {"bitcoin", 0, "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
+        {"ethereum", 0, "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"}}; // add from left side to not crash the adding algorithm  for exemple: {new_element},{old_element}  not : {old_element},{new_element}
 
 public:
     int Stock_elements_size = StockList.size();
