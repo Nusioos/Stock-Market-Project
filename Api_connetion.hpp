@@ -14,6 +14,8 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <atomic>
+#include <condition_variable>
+
 using namespace std;
 using json = nlohmann::json;
 class Api_connection_base
@@ -82,9 +84,13 @@ private:
     mutex mtx;
     atomic<double> btc_price = 0.0;
     atomic<double> prev_btc_price = 0.0;
+    atomic<bool> new_data_available{false};
     deque<size_t> btc_price_dequeue;
     atomic<bool> stop_thread{false};
     thread background_thread;
+    condition_variable cv;
+    mutex cv_mtx;
+    
 
 public:
     string URL_of_API;
@@ -112,10 +118,10 @@ public:
     {
         curl_global_init(CURL_GLOBAL_DEFAULT);
         stop_thread = false;
+        new_data_available = false; 
         background_thread = thread(&Api_connection::Get_values, this, URL_of_API, currname, currency);
         background_thread.detach();
 
-        // this_thread::sleep_for(chrono::seconds(10));
         while (true)
         {
             if (stop_thread)
@@ -131,23 +137,24 @@ public:
                         break;
                     }
                 }
-                // Get_values(URL_of_API, currname, currency);
-                // lock_guard<mutex> lock(mtx);
-                if (btc_price != prev_btc_price)
-                {
 
+                unique_lock<mutex> lock(cv_mtx);
+           cv.wait_for(lock, chrono::seconds(1), [this]()
+                        { return new_data_available.load() || stop_thread.load(); });
+                 if (new_data_available.load()) 
+                {
+                     new_data_available.store(false); 
                     cout << "\033[2J\033[1;1H";
                     cout << "price of " << currname << ": " << btc_price << " USD" << endl;
                     double price_value = btc_price.load();
                     size_t maks_price = max(curr, price_value);
                     Graph_maker(btc_price, btc_price_dequeue, maks_price);
-                    // prev_btc_price = btc_price;
                     prev_btc_price.store(btc_price.load(), std::memory_order_relaxed);
                     temp_price_to_retrive = prev_btc_price;
                     cout << "To stop the program press Q" << endl;
                 }
             }
-            // std::this_thread::sleep_for(std::chrono::seconds(1));
+            this_thread::sleep_for(chrono::seconds(1));
         }
         stop_thread = true;
         if (background_thread.joinable())
@@ -193,20 +200,10 @@ public:
     }
     void Get_values(string URL_, string name_of_curr, string currency) // Used in Api connection
     {
-        const chrono::seconds minimum_time_between_requests(10);
-        auto last_request_time = std::chrono::steady_clock::now();
-        while (!stop_thread)
+    while (!stop_thread.load())
         {
-            if (stop_thread)
-                break;
+       
 
-            auto current_time = chrono::steady_clock::now();
-            auto time_since_last_request = chrono::duration_cast<std::chrono::seconds>(current_time - last_request_time);
-
-            if (time_since_last_request < minimum_time_between_requests)
-            {
-                std::this_thread::sleep_for(minimum_time_between_requests - time_since_last_request);
-            }
             CURL *curl = curl_easy_init();
             if (curl)
             {
@@ -215,10 +212,11 @@ public:
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+                curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
                 CURLcode res = curl_easy_perform(curl);
                 if (res == CURLE_OK)
                 {
-                    int latest = 0;
                     try
                     {
                         json j = json::parse(readBuffer);
@@ -229,43 +227,32 @@ public:
 
                             if (price.is_number())
                             {
-
                                 btc_price.store(price.get<double>());
-
-                                if (btc_price_dequeue.size() > 30)
+                                
+                                if (btc_price_dequeue.size() >= 30)
                                 {
                                     btc_price_dequeue.pop_front();
                                 }
                                 btc_price_dequeue.push_back((size_t)btc_price);
-                            }
-                            else
-                            {
-                                cerr << "Invalid data received for " << name_of_curr << " in currency " << currency << endl;
+
+                                new_data_available.store(true);
+                                cv.notify_all();
                             }
                         }
-                        else
-                        {
-                            cerr << "The expected data for " << name_of_curr << " in currency " << currency << " was not found." << endl;
-                        }
-                    }
-                    catch (std::exception &e)
-                    {
-                        cerr << "Standard exception: " << e.what() << endl;
                     }
                     catch (...)
                     {
-                        cerr << "other error uknown" << endl;
+                        cerr << "diffrent error" << endl;
                     }
-                }
-                else
-                {
-                    cerr << "error CURL: " << curl_easy_strerror(res) << endl;
                 }
 
                 curl_easy_cleanup(curl);
             }
-            last_request_time = chrono::steady_clock::now();
-            this_thread::sleep_for(std::chrono::milliseconds(100));
+         for (int i = 0; i < 100; i++) // 100 × 100ms = 10s
+        {
+            if (stop_thread.load()) break;
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
         }
         cout << "done finishing..." << endl;
     }
