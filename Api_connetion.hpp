@@ -60,6 +60,8 @@ public:
                         cout << "\033[1;32mx\033[0m";
                     else if (x >= 0 && Stocks[x] < Stocks[x - 1])
                         cout << "\033[1;31mx\033[0m";
+                    else
+                        cout << "\033[1;33mx\033[0m";
                 }
 
                 else
@@ -229,7 +231,7 @@ public:
                             {
                                 btc_price.store(price.get<double>());
                                 
-                                if (btc_price_dequeue.size() >= 30)
+                                if (btc_price_dequeue.size() >= 70)
                                 {
                                     btc_price_dequeue.pop_front();
                                 }
