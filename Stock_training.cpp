@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include <string>
 #include "Api_connetion.hpp"
+#include "User_implementation.hpp"
 using namespace std;
 
 class SQLmanager
@@ -71,7 +72,7 @@ public:
     }
     void Delete_database()
     {
-        int result = remove("test.db");
+        bool result = remove("test.db");
         if (result == 0)
         {
             cout << "Baza usunieta " << endl;
