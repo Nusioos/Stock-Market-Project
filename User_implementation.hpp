@@ -18,19 +18,25 @@
 #include <condition_variable>
 
 using namespace std;
+
 class UserManager
 {
 private:
-    double funds;
     struct bought_stock
     {
         string name_of_a_stock;
         int amount;
         double price_stock;
     };
+    struct User
+    {
+        string name;
+        double funds;
+        vector<bought_stock> wallet;
+    };
 
 public:
-
+    User User_object;
     sqlite3 *database_user;
     char *errmsg = 0;
 
@@ -43,16 +49,22 @@ public:
         }
         cout << "Success" << endl;
 
-        const char *createTableSQL =
+        const char *createUserSQL =
             "CREATE TABLE IF NOT EXISTS Users ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "User_Name TINYTEXT NOT NULL, "
-            "funds REAL"
-            "amount INTEGER NOT NULL, "
-            "Stock_Name TINYTEXT NOT NULL, "
-            "price_stock REAL);";
+            "name TEXT NOT NULL UNIQUE, "
+            "funds REAL DEFAULT 10000.0);"; 
 
-        if (sqlite3_exec(database_user, createTableSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
+        const char *createWalletSQL =
+            "CREATE TABLE IF NOT EXISTS Wallet ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "user_id INTEGER NOT NULL, "      // which user
+            "stock_name TEXT NOT NULL, "     
+            "amount INTEGER NOT NULL, "       
+            "FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE, "// if suer is deleted everything is
+            "UNIQUE(user_id, stock_name));"; //no duplictaes
+
+        if (sqlite3_exec(database_user, createUserSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
         {
             std::cerr << "Błąd tworzenia tabeli: " << errmsg << std::endl;
             sqlite3_free(errmsg);
@@ -94,11 +106,48 @@ public:
 
         return false;
     }
-  
+    bool Is_user_already_indatabase(sqlite3 *db, string name)
+    {
+        sqlite3_stmt *stmt;
+        const char *sql_query = "SELECT 1 FROM Users WHERE name = ? LIMIT 1";
 
-    //User musi miec pieniadze
-    //mozliwosci kupowanie stocks
-    //jesli User zakupi fajnie by było gdyby widział wartość portfela
-    //user ma ID,imie,funds,amount,nazwa_stock,stock_price  
+        if (sqlite3_prepare_v2(db, sql_query, -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            return false;
+        }
+
+        sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT); // stament,paramter number,what length,-1 (SQL figure it out),copy=Transient/move_og=Static
+
+        bool exists = (sqlite3_step(stmt) == SQLITE_ROW);
+        sqlite3_finalize(stmt);
+
+        return exists;
+    }
+
+    void Initialize_User(User row, sqlite3 *db, char *errMsg)
+    {
+        const char *sql = "INSERT INTO stocks (User_Name, funds, API_URL) VALUES (?, ?, ?)";
+        sqlite3_stmt *stmt;
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+        if (rc != SQLITE_OK)
+        {
+            cout << "error Insert";
+            return;
+        }
+        sqlite3_bind_text(stmt, 1, row.symbol.c_str(), -1, SQLITE_STATIC); // binding the variables
+        sqlite3_bind_double(stmt, 2, row.price);
+        sqlite3_bind_text(stmt, 3, row.API_URL.c_str(), -1, SQLITE_STATIC);
+
+        rc = sqlite3_step(stmt); // do query
+        if (rc != SQLITE_DONE)
+        {
+            cout << "query error: " << sqlite3_errmsg(db) << endl;
+        }
+        sqlite3_finalize(stmt);
+    }
+    // User musi miec pieniadze
+    // mozliwosci kupowanie stocks
+    // jesli User zakupi fajnie by było gdyby widział wartość portfela
+    // user ma ID,imie,funds,amount,nazwa_stock,stock_price DONE
 };
 #endif
