@@ -6,6 +6,7 @@
 #include <string>
 #include "Api_connetion.hpp"
 #include "User_implementation.hpp"
+#include <memory>
 using namespace std;
 
 class SQLmanager
@@ -112,8 +113,7 @@ private:
     vector<tuple<string, double, string>> StockList = {
         {"solana", 0, "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"},
         {"bitcoin", 0, "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
-        {"ethereum", 0, "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"}
-         }; // add from left side to not crash the adding algorithm  for exemple: {new_element},{old_element}  not : {old_element},{new_element}
+        {"ethereum", 0, "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"}}; // add from left side to not crash the adding algorithm  for exemple: {new_element},{old_element}  not : {old_element},{new_element}
 
 public:
     int Stock_elements_size = StockList.size();
@@ -127,11 +127,11 @@ public:
             manager->Insert_to_table(manager->stock_object, db, errMsg);
         }
     }
-    void fill_stocks(vector<unique_ptr<Api_connection>> &stocks, SQLmanager *manager)
+    void fill_stocks(vector<unique_ptr<Api_connection>> &stocks, SQLmanager *manager, sqlite3* user_db = nullptr, const string& user_name = "")
     {
         for (int i = 0; i < Stock_elements_size; i++)
         {
-            auto obj = make_unique<Api_connection>(get<2>(StockList[i]), get<0>(StockList[i]), "usd");
+            auto obj = make_unique<Api_connection>(get<2>(StockList[i]), get<0>(StockList[i]), "usd",user_db,user_name);
             stocks.push_back(move(obj));
         }
     }
@@ -172,6 +172,27 @@ bool Do_ywt_cleardatabase(bool &Is_clearing_database)
 }
 int main()
 {
+    UserManager User_object;
+    string name;
+    if (!User_object.Initialize_database_user())
+    {
+        cerr << "unable to initialize!" << endl;
+        return 1;
+    }
+    cout << "What's your name" << endl;
+    cin >> name;
+    if (User_object.Is_user_already_indatabase(User_object.database_user, name))
+    {
+        cout << "Welcome back, " << name << "!" << endl;
+    }
+    else
+    {
+        cout << "Welcome new user" << endl;
+        User_object.User_object.name = name;
+        User_object.User_object.funds = 10000.0;
+        User_object.Initialize_User(User_object.User_object, User_object.database_user,  User_object.errmsg);
+    }
+
     SQLmanager *manager = new SQLmanager();
     SQL_list_of_stocks List_stocks;
     manager->Initialize_database();
@@ -220,7 +241,7 @@ int main()
         return 0;
     };*/
     vector<unique_ptr<Api_connection>> stocks;
-    List_stocks.fill_stocks(stocks, manager);
+    List_stocks.fill_stocks(stocks, manager,User_object.database_user, name);
     while (1)
     {
         cout << "PIck the stock that you want to visit(Name):" << endl;

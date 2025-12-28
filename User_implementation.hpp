@@ -7,15 +7,9 @@
 #include <vector>
 #include <curl/curl.h>
 #include <string>
-#include <chrono>
-#include <thread>
-#include <mutex>
-#include <deque>
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
-#include <atomic>
-#include <condition_variable>
 
 using namespace std;
 
@@ -53,21 +47,30 @@ public:
             "CREATE TABLE IF NOT EXISTS Users ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "name TEXT NOT NULL UNIQUE, "
-            "funds REAL DEFAULT 10000.0);"; 
+            "funds REAL DEFAULT 10000.0);";
 
         const char *createWalletSQL =
             "CREATE TABLE IF NOT EXISTS Wallet ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "user_id INTEGER NOT NULL, "      // which user
-            "stock_name TEXT NOT NULL, "     
-            "amount INTEGER NOT NULL, "       
-            "FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE, "// if suer is deleted everything is
-            "UNIQUE(user_id, stock_name));"; //no duplictaes
+            "user_id INTEGER NOT NULL, " // which user
+            "stock_name TEXT NOT NULL, "
+            "amount INTEGER NOT NULL, "
+            "price_paid REAL NOT NULL, "
+            "current_price REAL NOT NULL, "   
+            "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " 
+            "FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE, " // if suer is deleted everything is
+            "UNIQUE(user_id, stock_name));";                                 // no duplictaes
 
         if (sqlite3_exec(database_user, createUserSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
         {
-            std::cerr << "Błąd tworzenia tabeli: " << errmsg << std::endl;
+            std::cerr << "Błąd tworzenia tabeli Users: " << errmsg << std::endl;
             sqlite3_free(errmsg);
+        }
+        if (sqlite3_exec(database_user, createWalletSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
+        {
+            cerr << "Błąd tworzenia tabeli Wallet: " << errmsg << endl;
+            sqlite3_free(errmsg);
+            return false;
         }
         else
         {
@@ -126,7 +129,7 @@ public:
 
     void Initialize_User(User row, sqlite3 *db, char *errMsg)
     {
-        const char *sql = "INSERT INTO stocks (User_Name, funds, API_URL) VALUES (?, ?, ?)";
+        const char *sql = "INSERT INTO Users (name, funds) VALUES (?, ?)";
         sqlite3_stmt *stmt;
         int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK)
@@ -134,9 +137,9 @@ public:
             cout << "error Insert";
             return;
         }
-        sqlite3_bind_text(stmt, 1, row.symbol.c_str(), -1, SQLITE_STATIC); // binding the variables
-        sqlite3_bind_double(stmt, 2, row.price);
-        sqlite3_bind_text(stmt, 3, row.API_URL.c_str(), -1, SQLITE_STATIC);
+         cout << "DEBUG: Inserting user: name=" << row.name << ", funds=" << row.funds << endl;
+        sqlite3_bind_text(stmt, 1, row.name.c_str(), -1, SQLITE_STATIC); // binding the variables
+        sqlite3_bind_double(stmt, 2, row.funds);
 
         rc = sqlite3_step(stmt); // do query
         if (rc != SQLITE_DONE)
@@ -145,9 +148,9 @@ public:
         }
         sqlite3_finalize(stmt);
     }
-    // User musi miec pieniadze
+    // User musi miec pieniadze na starcie initialize_USER DONE
     // mozliwosci kupowanie stocks
     // jesli User zakupi fajnie by było gdyby widział wartość portfela
-    // user ma ID,imie,funds,amount,nazwa_stock,stock_price DONE
+    // user ma ID,imie,funds DONE
 };
 #endif
