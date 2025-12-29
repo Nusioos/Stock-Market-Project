@@ -1,22 +1,22 @@
-#Stock-Market-Project
+# Stock-Market-Project
 A C++ stock market simulation application with real-time API integration and demo trading capabilities.
 
-#Project Description
+# Project Description
 This C++ application connects to financial APIs to fetch real-time stock prices and provides a comprehensive demo trading platform. Users can simulate buying and selling stocks using virtual currency. The system includes three integrated databases for managing user accounts, stock data, and transaction history.
 
-#Features
+# Features
 -Real-time API Integration: Connects to financial APIs for live stock prices
 -Demo Trading System: Buy and sell stocks with virtual currency
 -Multi-Database Architecture: Three databases for comprehensive data management
 -Portfolio Tracking: Monitor investments and performance metrics
 -Transaction History: Complete record of all trading activities
 
-#Technical Stack
+# Technical Stack
 -Language: C++
 -Libraries nlohmann,sqllite3
 -Databases: Three databases stocks,User,Wallet systems
 
-#How to Run?
+# How to Run?
 # 1.Create catalog build
 mkdir build
 cd build
