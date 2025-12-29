@@ -1,0 +1,12 @@
+#Ignore build
+build/
+
+#Ignore Cmake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Ignore main
+main
+test

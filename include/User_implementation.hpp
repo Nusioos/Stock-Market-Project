@@ -137,7 +137,7 @@ public:
             cout << "error Insert";
             return;
         }
-         cout << "DEBUG: Inserting user: name=" << row.name << ", funds=" << row.funds << endl;
+        // cout << "DEBUG: Inserting user: name=" << row.name << ", funds=" << row.funds << endl;
         sqlite3_bind_text(stmt, 1, row.name.c_str(), -1, SQLITE_STATIC); // binding the variables
         sqlite3_bind_double(stmt, 2, row.funds);
 

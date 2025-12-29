@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 #include <curl/curl.h>
-#include "nlohmann/json.hpp"
+#include "../nlohmann/json.hpp"
 #include <chrono>
 #include <thread>
 #include <mutex>
@@ -247,6 +247,10 @@ public:
     // Buy sell section for User
     void ShowBuySellMenu(const string &user_name)
     {
+        cout << "\n=== DEBUG BuyStock ===" << endl;
+        cout << "user_db pointer: " << user_db << endl;
+        cout << "current_user_name in object: " << current_user_name << endl;
+        cout << "user_name parameter: " << user_name << endl;
         if (!user_db)
         {
             cout << "User database not connected!" << endl;
