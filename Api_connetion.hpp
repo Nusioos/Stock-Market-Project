@@ -21,12 +21,12 @@ using json = nlohmann::json;
 class Api_connection_base
 {
 public:
-    virtual void Get_values(string URL_, string name_of_curr, string currency) = 0;
+   // virtual void Get_values(string URL_, string name_of_curr, string currency) = 0;
     virtual ~Api_connection_base() {}
     // User var
     virtual bool BuyStock(const string &user_name, double amount, double price) = 0;
     virtual bool SellStock(const string &user_name, double amount, double price) = 0;
-    virtual double GetPortfolioValue(const string &user_name) = 0;
+//    virtual double GetPortfolioValue(const string &user_name) = 0;
 };
 class Graph_maker
 {
@@ -664,6 +664,7 @@ public:
             }
         }
         cout << "done finishing..." << endl;
+        
     }
 };
 #endif
