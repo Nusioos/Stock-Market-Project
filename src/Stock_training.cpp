@@ -163,8 +163,9 @@ public:
         sqlite3_finalize(stmt);
     }
 };
-bool Do_ywt_cleardatabase(bool &Is_clearing_database)
+bool Do_ywt_cleardatabase()
 {
+    bool Is_clearing_database;
     cout << "do you want to clear database 0-NO 1-YES :" << endl;
     cin >> Is_clearing_database;
     cout << "\033[2J\033[1;1H"; // clearing console
@@ -198,7 +199,7 @@ int main()
     manager->Initialize_database();
     int amount_of_elements_added = 0;
     bool Is_table_empty = manager->IS_database_empty(manager->db, List_stocks.Stock_elements_size, amount_of_elements_added);
-    bool Is_clearing_database = Do_ywt_cleardatabase(Is_clearing_database);
+    bool Is_clearing_database = Do_ywt_cleardatabase();
     if (Is_clearing_database)
     {
         manager->Delete_database();
