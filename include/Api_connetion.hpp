@@ -656,7 +656,7 @@ public:
 
                 curl_easy_cleanup(curl);
             }
-            for (int i = 0; i < 100; i++) // 100 × 100ms = 10s
+            for (int i = 0; i < 100; i++) // 100 times 100ms = 10s
             {
                 if (stop_thread.load())
                     break;

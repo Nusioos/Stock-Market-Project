@@ -63,18 +63,18 @@ public:
 
         if (sqlite3_exec(database_user, createUserSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
         {
-            std::cerr << "Błąd tworzenia tabeli Users: " << errmsg << std::endl;
+            std::cerr << "error Users: " << errmsg << std::endl;
             sqlite3_free(errmsg);
         }
         if (sqlite3_exec(database_user, createWalletSQL, nullptr, nullptr, &errmsg) != SQLITE_OK)
         {
-            cerr << "Błąd tworzenia tabeli Wallet: " << errmsg << endl;
+            cerr << "error Wallet: " << errmsg << endl;
             sqlite3_free(errmsg);
             return false;
         }
         else
         {
-            std::cout << "Tabela gotowa!" << std::endl;
+            std::cout << "Table ready!" << std::endl;
         }
         return true;
     }
@@ -83,11 +83,11 @@ public:
         bool result = remove("User_info.db");
         if (result == 0)
         {
-            cout << "Baza usunieta " << endl;
+            cout << "databse deleted " << endl;
         }
         else
         {
-            cout << "Error nie da sie usunac bazy" << endl;
+            cout << "Error" << endl;
         }
     }
     bool IS_database_empty(sqlite3 *db)

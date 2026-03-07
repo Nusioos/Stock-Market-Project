@@ -41,12 +41,12 @@ public:
 
         if (sqlite3_exec(db, createTableSQL, nullptr, nullptr, &errMsg) != SQLITE_OK)
         {
-            std::cerr << "Błąd tworzenia tabeli: " << errMsg << std::endl;
+            std::cerr << "Error: " << errMsg << std::endl;
             sqlite3_free(errMsg);
         }
         else
         {
-            std::cout << "Tabela gotowa!" << std::endl;
+            std::cout << "Done!" << std::endl;
         }
         return true;
     }
@@ -76,11 +76,11 @@ public:
         bool result = remove("test.db");
         if (result == 0)
         {
-            cout << "Baza usunieta " << endl;
+            cout << "Database deleted " << endl;
         }
         else
         {
-            cout << "Error nie da sie usunac bazy" << endl;
+            cout << "Error" << endl;
         }
     }
 
@@ -165,7 +165,7 @@ public:
 };
 bool Do_ywt_cleardatabase(bool &Is_clearing_database)
 {
-    cout << "do tyou want to clear database 0-NO 1-YES :" << endl;
+    cout << "do you want to clear database 0-NO 1-YES :" << endl;
     cin >> Is_clearing_database;
     cout << "\033[2J\033[1;1H"; // clearing console
     return Is_clearing_database;
@@ -212,7 +212,7 @@ int main()
 
     auto callback = [](void *, int argc, char **argv, char **colNames) -> int
     {
-        std::cout << "Wynik:" << std::endl;
+        std::cout << "Outcome:" << std::endl;
         for (int i = 0; i < argc; i++)
         {
             std::cout << colNames[i] << " = " << (argv[i] ? argv[i] : "NULL") << std::endl;
@@ -224,7 +224,7 @@ int main()
     const char *selectSQL = "SELECT * FROM stocks;";
     if (sqlite3_exec(manager->db, selectSQL, callback, nullptr, &manager->errMsg) != SQLITE_OK)
     {
-        std::cerr << "Blad SELECT: " << manager->errMsg << std::endl;
+        std::cerr << "error SELECT: " << manager->errMsg << std::endl;
         sqlite3_free(manager->errMsg);
     }
 
@@ -244,7 +244,7 @@ int main()
     List_stocks.fill_stocks(stocks, manager,User_object.database_user, name);
     while (1)
     {
-        cout << "PIck the stock that you want to visit(Name):" << endl;
+        cout << "Pick the stock that you want to visit(Name):" << endl;
         string pick_stock;
         cin >> pick_stock;
         for (int i = 0; i < List_stocks.Stock_elements_size; i++)
@@ -261,7 +261,7 @@ int main()
         }
         if (sqlite3_exec(manager->db, selectSQL, callback, nullptr, &manager->errMsg) != SQLITE_OK)
         {
-            std::cerr << "Blad SELECT: " << manager->errMsg << std::endl;
+            std::cerr << "error SELECT: " << manager->errMsg << std::endl;
             sqlite3_free(manager->errMsg);
         }
     }
