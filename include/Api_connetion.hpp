@@ -174,7 +174,7 @@ public:
                     Graph_maker(btc_price, btc_price_dequeue, maks_price);
                     prev_btc_price.store(btc_price.load(), std::memory_order_relaxed);
                     temp_price_to_retrive = prev_btc_price;
-                    cout << "To stop the program press Q" << endl;
+                    cout << "To stop the program press Q To open menu press M" << endl;
                 }
             }
             this_thread::sleep_for(chrono::seconds(1));
@@ -616,12 +616,14 @@ public:
             if (curl)
             {
                 string readBuffer;
-                curl_easy_setopt(curl, CURLOPT_URL, URL_.c_str());
-                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-
-                curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
-                curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
+              curl_easy_setopt(curl, CURLOPT_URL, URL_.c_str());
+curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
+curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64)");
+curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");   // obsługa gzip
+curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
                 CURLcode res = curl_easy_perform(curl);
                 if (res == CURLE_OK)
                 {
