@@ -4,6 +4,8 @@ A C++ stock market simulation application with real-time API integration and dem
 ## Project Description
 This C++ application connects to financial APIs to fetch real-time stock prices and provides a comprehensive demo trading platform. Users can simulate buying and selling stocks using virtual currency. The system includes three integrated databases for managing user accounts, stock data, and transaction history.
 
+![Zrzut ekranu projektu](./readme_assets/screenshot+stock.png)
+
 ## Features
 - Real-time API Integration: Connects to financial APIs for live stock prices
 - Demo Trading System: Buy and sell stocks with virtual currency
